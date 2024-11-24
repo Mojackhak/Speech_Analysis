@@ -192,7 +192,7 @@ def get_F_0( signal, rate, time_step = 0.0, min_pitch = 75, max_pitch = 600,
     
     #finding the global peak the way Praat does
     global_peak = max( abs( sig - sig.mean() ) ) 
-    print(type(global_peak),'\n')
+    # print(type(global_peak),'\n')
     e = np.e
     inf = np.inf
     log = np.log2
@@ -428,14 +428,18 @@ def get_F_0( signal, rate, time_step = 0.0, min_pitch = 75, max_pitch = 600,
         #frame
         if f_0[ i ] > max_place_poss or f_0[ i ] < min_place_poss :
             f_0[ i ] = inf
-              
+    
+    times_list = [np.mean( time ) for time in time_vals]
+    f_0_list = [1/i if i < inf else np.nan for i in f_0]
+    f_0_dict ={'times':times_list, 'f0':f_0_list}
+
     f_0 = f_0[ f_0 < inf ]
     if pulse:              
-        return [ np.median( 1.0 / f_0 ), list( f_0 ), time_vals, signal ]
+        return [ np.median( 1.0 / f_0 ), list( f_0 ), time_vals, signal ], f_0_dict
     if len( f_0 ) == 0:    
-        return [ 0 ]
+        return [ 0 ], f_0_dict
     else:                   
-        return [ np.median( 1.0 / f_0 ) ]   
+        return [ np.median( 1.0 / f_0 ) ], f_0_dict   
 
 def get_HNR( signal, rate, time_step = 0, min_pitch = 75, 
              silence_threshold = .1, periods_per_window = 4.5 ):
@@ -626,7 +630,7 @@ def get_HNR( signal, rate, time_step = 0, min_pitch = 75,
     best_candidate = np.mean( best_cands )
     return best_candidate
     
-def get_Pulses( signal, rate, min_pitch = 75, max_pitch = 600,
+def get_Pulses( signal, rate, time_step=0.0, min_pitch = 75, max_pitch = 600,
                 include_max = False, include_min = True ):
     """
     Computes glottal pulses of a signal.
@@ -662,6 +666,7 @@ def get_Pulses( signal, rate, min_pitch = 75, max_pitch = 600,
     Args:
         signal ( numpy.ndarray ): This is the signal the glottal pulses will be calculated from.
         rate ( int ): This is the number of samples taken per second.
+        time_step ( float ): ( optional, default value: 0.0 ) This is the measurement, in seconds, of time passing between each frame. The smaller the time_step, the more overlap that will occur. If 0 is supplied, the degree of oversampling will be equal to four.
         min_pitch ( float ): ( optional, default value: 75 ) This is the minimum value to be returned as pitch, which cannot be less than or equal to zero
         max_pitch ( float ): ( optional, default value: 600 ) This is the maximum value to be returned as pitch, which cannot be greater than Nyquist Frequency   
         include_max ( bool ): ( optional, default value: False ) This determines if maxima values will be used when calculating pulses
@@ -729,10 +734,10 @@ def get_Pulses( signal, rate, min_pitch = 75, max_pitch = 600,
     if not include_max and not include_min:
         raise ValueError( "include_min and include_max can't both be False" )
         
-    median, period, intervals, signal = get_F_0( signal, rate, 
-                                                min_pitch = min_pitch, 
-                                                max_pitch = max_pitch, 
-                                                pulse = True )
+    (median, period, intervals, signal), _ = get_F_0( signal, rate, time_step=time_step,
+                                                     min_pitch = min_pitch, 
+                                                     max_pitch = max_pitch, 
+                                                     pulse = True )
     global_peak = max( abs( signal - signal.mean() ) )
     #points will be a list of points where pulses occur, voiced_intervals will
     #be a list of tuples consisting of voiced intervals with overlap
